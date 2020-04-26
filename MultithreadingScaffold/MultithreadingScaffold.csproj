@@ -21,4 +21,8 @@
     <DocumentationFile>D:\Personal\MultithreadingScaffold\MultithreadingScaffold\MultithreadingScaffold.xml</DocumentationFile>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+
 </Project>
