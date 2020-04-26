@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Authors>Hope.Phenom</Authors>
+    <Description>Multi-threading work scaffolding, used to quickly create multi-threaded work code.
+多线程工作脚手架，用于快速创建多线程工作代码。</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Copyright>Copyright © 2020 Hope.Phenom</Copyright>
+    <PackageProjectUrl>https://github.com/ChaoShengze/MultithreadingScaffold</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ChaoShengze/MultithreadingScaffold</RepositoryUrl>
+    <RepositoryType>Github</RepositoryType>
+    <PackageReleaseNotes>Multi-threading work scaffolding, used to quickly create multi-threaded work code.
+多线程工作脚手架，用于快速创建多线程工作代码。</PackageReleaseNotes>
+    <PackageTags>Multi-threading</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DocumentationFile>D:\Personal\MultithreadingScaffold\MultithreadingScaffold\MultithreadingScaffold.xml</DocumentationFile>
+  </PropertyGroup>
+
+</Project>
