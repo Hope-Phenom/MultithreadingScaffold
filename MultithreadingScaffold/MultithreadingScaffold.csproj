@@ -15,6 +15,7 @@
     <PackageReleaseNotes>Multi-threading work scaffolding, used to quickly create multi-threaded work code.
 多线程工作脚手架，用于快速创建多线程工作代码。</PackageReleaseNotes>
     <PackageTags>Multi-threading</PackageTags>
+    <Version>1.0.1</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
