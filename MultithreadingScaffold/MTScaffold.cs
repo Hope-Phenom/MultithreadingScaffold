@@ -148,6 +148,7 @@ namespace MultithreadingScaffold
                     if (TTL != -1)
                         ls_thread.Add(thread);
 
+                    thread.IsBackground = true;
                     thread.Start();
                     ThreadCount++;
                 }
