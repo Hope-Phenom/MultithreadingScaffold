@@ -46,6 +46,11 @@ namespace MultithreadingScaffold
         /// </summary>
         public bool InNewThread = false;
         /// <summary>
+        /// Whether to enable the planning mode, slice up tasks and start a fixed number of threads to execute the task, reducing thread switching.
+        /// 是否开启规划模式，即对任务进行分块，然后启动固定数量的线程来进行操作，减少线程切换
+        /// </summary>
+        public bool IsPlanningMode = false;
+        /// <summary>
         /// Specify an object as a lock, if not specified, an Object will be automatically created as a lock.
         /// 指定作为锁的一个对象，若不指定则会自动创建一个Object作为锁
         /// </summary>
@@ -75,12 +80,12 @@ namespace MultithreadingScaffold
         /// Thread counter, used to determine whether a new thread can be started.
         /// 线程计数器，用于判断是否可以启动新线程
         /// </summary>
-        private int ThreadCount = 0;
+        private volatile int ThreadCount = 0;
         /// <summary>
         /// Thread counter of started threading, used to judge whether all tasks can be ended.
         /// 已启动线程计数器，用于判断是否可以结束全部任务
         /// </summary>
-        public int Counter = 0;
+        public volatile int Counter = 0;
         /// <summary>
         /// Start time of the entire MTScaffold object.
         /// 整个MTScaffold对象的启动时间
@@ -171,6 +176,81 @@ namespace MultithreadingScaffold
                 ThreadWorking();
         }
 
+
+        /// <summary>
+        /// Actual working thread in plan mode.
+        /// 实际工作线程，计划模式
+        /// </summary>
+        private void ThreadWorkingInPlanMode(List<List<int>> plan)
+        {
+            if (ThreadLimit == 0)
+                ThreadLimit = Environment.ProcessorCount;
+
+            if (TTL != -1)
+            {
+                StartTime = DateTime.Now.Second;
+                ls_thread = new List<Thread>();
+            }
+
+            var planCounter = -1;
+            for (int i = 0; i < ThreadLimit; i++)
+            {
+                Counter++;
+                planCounter++;
+
+                if (TTL != -1)
+                    if (DateTime.Now.Second - StartTime >= TTL)
+                        return;
+
+                Thread thread = new Thread(() =>
+                {
+                    if (WriteConsole)
+                        LogOut($"Starting new Thread, Curr Thread Count:{ThreadCount}, {Counter + 1} / {ThreadLimit}.");
+
+                    try
+                    {
+                        var indexArr = plan[planCounter];
+                        foreach (int index in indexArr)
+                            Worker(index);
+                    }
+                    catch (ThreadInterruptedException)
+                    {
+
+                    }
+
+                    ThreadCount--;
+                });
+
+                if (TTL != -1)
+                    ls_thread.Add(thread);
+
+                thread.IsBackground = true;
+                thread.Start();
+                ThreadCount++;
+
+                Thread.Sleep(SleepTime);
+            }
+
+            SpinWait spinWait = new SpinWait();
+            while (ThreadCount > 0)
+                spinWait.SpinOnce();
+
+            Final?.Invoke();
+        }
+
+        /// <summary>
+        /// Calling thread in Plan mode
+        /// 调用计划模式的线程
+        /// </summary>
+        private void CallPlanThreadWorking()
+        {
+            var plan = GetPlanArr(Workload);
+            if (InNewThread)
+                Task.Run(new Action(() => { ThreadWorkingInPlanMode(plan); }));
+            else
+                ThreadWorkingInPlanMode(plan);
+        }
+
         /// <summary>
         /// 调用线程，启动所有的多线程工作
         /// </summary>
@@ -191,7 +271,10 @@ namespace MultithreadingScaffold
                 });
             }
 
-            CallThreadWorking();
+            if (!IsPlanningMode)
+                CallThreadWorking();
+            else
+                CallPlanThreadWorking();
         }
 
         /// <summary>
@@ -203,6 +286,30 @@ namespace MultithreadingScaffold
         {
             var time = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             Console.WriteLine($@"{time} || {str}");
+        }
+
+        /// <summary>
+        /// Get arr of task index.
+        /// 获取包含任务索引的计划数组
+        /// </summary>
+        /// <param name="num"></param>
+        /// <returns></returns>
+        private List<List<int>> GetPlanArr(int num)
+        {
+            var list = new List<List<int>>();
+            for (int i = 0; i < ThreadLimit; i++)
+                list.Add(new List<int>());
+
+            var index = -1;
+            for (int i = 0; i < num; i++)
+            {
+                if (++index >= ThreadLimit)
+                    index = 0;
+
+                var ls = list[index];
+                ls.Add(i);
+            }
+            return list;
         }
     }
 }

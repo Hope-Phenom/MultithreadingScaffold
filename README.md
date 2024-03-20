@@ -8,7 +8,7 @@ Multi-threading work scaffolding, used to quickly create multi-threaded work cod
 
 ```c#
 using MultithreadingScaffold;
-
+//Normal Mode
 var arr = new string[] { "A", "B", "C" };
 MTScaffold mTScaffold = new MTScaffold();
 mTScaffold.Worker = (i) =>
@@ -23,9 +23,28 @@ mTScaffold.Workload = arr.Count;
 mTScaffold.Start();
 ```
 
+```c#
+using MultithreadingScaffold;
+//Plan Mode
+var arr = new string[] { "A", "B", "C" };
+MTScaffold mTScaffold = new MTScaffold();
+mTScaffold.Worker = (i) =>
+{
+    Console.WriteLine(arr[i]);
+};
+mTScaffold.Final = () =>
+{
+    Console.WriteLine("It's Over.");
+};
+mTScaffold.IsPlanMode = true;
+mTScaffold.Workload = arr.Count;
+mTScaffold.Start();
+```
+
 
 ## Param
 
+- IsPlanMode, bool, Optional —— In this mode, MTScaffold will slice tasks and start fixed num threads to handle section. Dramatically improve performance by reducing context switching. 在计划模式下，MTScaffold 会对整体任务进行切分，并以固定数量的线程来对任务进行处理。通过减少线程的上下文切换，可以大幅的提升性能。
 - Workload, int, Required —— Used to determine how many threads are counted as the end of the total task after work. 工作量，用于判断多少个线程工作完毕后算作总任务结束。
 - Worker, ThreadWorker, Required  —— The multi-threading delegate used. 用于多线程工作执行的委托。
 - Final, ThreadFinal, Optional —— Action after multi-threading work end. 工作结束时调用。
