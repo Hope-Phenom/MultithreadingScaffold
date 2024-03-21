@@ -8,14 +8,15 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Copyright>Copyright © 2020 Hope.Phenom</Copyright>
+    <Copyright>Copyright © 2024 Hope.Phenom</Copyright>
     <PackageProjectUrl>https://github.com/ChaoShengze/MultithreadingScaffold</PackageProjectUrl>
     <RepositoryUrl>https://github.com/ChaoShengze/MultithreadingScaffold</RepositoryUrl>
     <RepositoryType>Github</RepositoryType>
     <PackageReleaseNotes>Multi-threading work scaffolding, used to quickly create multi-threaded work code.
 多线程工作脚手架，用于快速创建多线程工作代码。</PackageReleaseNotes>
     <PackageTags>Multi-threading</PackageTags>
-    <Version>1.0.1</Version>
+    <Version>1.1.0</Version>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -24,6 +25,13 @@
 
   <ItemGroup>
     <Folder Include="Properties\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>
