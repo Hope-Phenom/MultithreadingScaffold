@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,7 +18,7 @@ namespace MultithreadingScaffold
         /// The multi-threading delegate used.
         /// 用于多线程工作执行的委托
         /// </summary>
-        public delegate void ThreadWorker(int counter);
+        public delegate void ThreadWorker(long counter);
         /// <summary>
         /// Final action after multi-threading work end.
         /// 用于多线程工作完毕后的最终操作，超时重试结束时也会触发此函数
@@ -51,11 +52,6 @@ namespace MultithreadingScaffold
         /// </summary>
         public bool IsPlanningMode = false;
         /// <summary>
-        /// Specify an object as a lock, if not specified, an Object will be automatically created as a lock.
-        /// 指定作为锁的一个对象，若不指定则会自动创建一个Object作为锁
-        /// </summary>
-        public object Locker = null;
-        /// <summary>
         /// Whether to print information related to thread work, closed by default.
         /// 是否打印和线程工作相关的信息，默认关闭
         /// </summary>
@@ -80,12 +76,12 @@ namespace MultithreadingScaffold
         /// Thread counter, used to determine whether a new thread can be started.
         /// 线程计数器，用于判断是否可以启动新线程
         /// </summary>
-        private volatile int ThreadCount = 0;
+        private long ThreadCount = 0;
         /// <summary>
         /// Thread counter of started threading, used to judge whether all tasks can be ended.
         /// 已启动线程计数器，用于判断是否可以结束全部任务
         /// </summary>
-        public volatile int Counter = 0;
+        public long Counter = 0;
         /// <summary>
         /// Start time of the entire MTScaffold object.
         /// 整个MTScaffold对象的启动时间
@@ -105,49 +101,39 @@ namespace MultithreadingScaffold
         /// </summary>
         private void ThreadWorking()
         {
-            if (Locker == null)
-                Locker = new object();
-
-            if (ThreadLimit == 0)
-                ThreadLimit = Environment.ProcessorCount;
-
             if (TTL != -1)
             {
                 StartTime = DateTime.Now.Second;
                 ls_thread = new List<Thread>();
             }
 
-            while (Counter < Workload || ThreadCount > 0)
+            while (Interlocked.Read(ref Counter) < Workload || Interlocked.Read(ref ThreadCount) > 0)
             {
-                if (Counter >= Workload)
+                if (Interlocked.Read(ref Counter) >= Workload)
                     continue;
 
                 if (TTL != -1)
                     if (DateTime.Now.Second - StartTime >= TTL)
                         return;
 
-                if (ThreadCount < ThreadLimit)
+                if (Interlocked.Read(ref ThreadCount) < ThreadLimit)
                 {
                     Thread thread = new Thread(() =>
                     {
                         if (WriteConsole)
-                            LogOut($"Starting new Thread, Curr Thread Count:{ThreadCount}, {Counter + 1} / {Workload}.");
-
-                        var index = 0;
-
-                        lock (Locker)
-                            index = ++Counter;
+                            LogOut($"Starting new Thread, Curr Thread Count:{Interlocked.Read(ref ThreadCount)}, " +
+                                $"{Interlocked.Read(ref Counter) + 1} / {Workload}.");
 
                         try
                         {
-                            Worker(index - 1);
+                            Worker(Interlocked.Increment(ref Counter) - 1);
                         }
                         catch (ThreadInterruptedException)
                         {
 
                         }
 
-                        ThreadCount--;
+                        Interlocked.Decrement(ref ThreadCount);
                     });
 
                     if (TTL != -1)
@@ -155,7 +141,7 @@ namespace MultithreadingScaffold
 
                     thread.IsBackground = true;
                     thread.Start();
-                    ThreadCount++;
+                    Interlocked.Increment(ref ThreadCount);
                 }
 
                 Thread.Sleep(SleepTime);
@@ -176,15 +162,13 @@ namespace MultithreadingScaffold
                 ThreadWorking();
         }
 
-
         /// <summary>
         /// Actual working thread in plan mode.
         /// 实际工作线程，计划模式
         /// </summary>
         private void ThreadWorkingInPlanMode(List<List<int>> plan)
         {
-            if (ThreadLimit == 0)
-                ThreadLimit = Environment.ProcessorCount;
+            long PlanTaskCounter = 0;
 
             if (TTL != -1)
             {
@@ -192,33 +176,35 @@ namespace MultithreadingScaffold
                 ls_thread = new List<Thread>();
             }
 
-            var planCounter = -1;
             for (int i = 0; i < ThreadLimit; i++)
             {
-                Counter++;
-                planCounter++;
-
                 if (TTL != -1)
                     if (DateTime.Now.Second - StartTime >= TTL)
                         return;
 
+                Debug.WriteLine($"PlanCounter: {i}");
+                var indexArr = plan[i];
+
                 Thread thread = new Thread(() =>
                 {
                     if (WriteConsole)
-                        LogOut($"Starting new Thread, Curr Thread Count:{ThreadCount}, {Counter + 1} / {ThreadLimit}.");
+                        LogOut($"Starting new Thread, Curr Thread Count:{Interlocked.Read(ref ThreadCount)}, " +
+                            $"{Interlocked.Read(ref Counter) + 1} / {ThreadLimit}.");
 
                     try
                     {
-                        var indexArr = plan[planCounter];
                         foreach (int index in indexArr)
+                        {
                             Worker(index);
+                            Interlocked.Increment(ref PlanTaskCounter);
+                        }
                     }
                     catch (ThreadInterruptedException)
                     {
 
                     }
 
-                    ThreadCount--;
+                    Interlocked.Decrement(ref ThreadCount);
                 });
 
                 if (TTL != -1)
@@ -226,13 +212,13 @@ namespace MultithreadingScaffold
 
                 thread.IsBackground = true;
                 thread.Start();
-                ThreadCount++;
+                Interlocked.Increment(ref ThreadCount);
 
                 Thread.Sleep(SleepTime);
             }
 
             SpinWait spinWait = new SpinWait();
-            while (ThreadCount > 0)
+            while (PlanTaskCounter < Workload)
                 spinWait.SpinOnce();
 
             Final?.Invoke();
@@ -270,6 +256,9 @@ namespace MultithreadingScaffold
                             t.Interrupt();
                 });
             }
+
+            if (ThreadLimit == 0)
+                ThreadLimit = Environment.ProcessorCount;
 
             if (!IsPlanningMode)
                 CallThreadWorking();
